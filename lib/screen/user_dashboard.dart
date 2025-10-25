@@ -1,212 +1,263 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
+import '../widgets/custom_bottom_nav.dart';
 
-class UserDashboard extends StatelessWidget {
+class UserDashboard extends StatefulWidget {
   const UserDashboard({Key? key}) : super(key: key);
+
+  @override
+  State<UserDashboard> createState() => _UserDashboardState();
+}
+
+class _UserDashboardState extends State<UserDashboard> {
+  String userName = 'Sophia';
+  Map<String, dynamic>? currentUser;
+  List<Map<String, dynamic>> customers = [];
+  List<Map<String, dynamic>> filteredCustomers = [];
+  final TextEditingController _searchController = TextEditingController();
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+    _searchController.addListener(_filterCustomers);
+  }
+
+  Future<void> _initializeData() async {
+    await _loadUserData();
+    await _loadCustomers();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = await ApiService.getCurrentUser();
+    if (user != null) {
+      setState(() {
+        currentUser = user;
+        userName = user['name'] ?? 'User';
+      });
+    }
+  }
+
+  Future<void> _loadCustomers() async {
+    setState(() {
+      isLoading = true;
+    });
+    
+    final customersList = await ApiService.getCustomers();
+    
+    // Filter out current user from the list
+    final filteredList = customersList.where((customer) {
+      if (currentUser == null) return true;
+      
+      // Compare by phone number (more reliable than ID)
+      final customerPhone = customer['phone']?.toString();
+      final currentUserPhone = currentUser!['phone']?.toString();
+      
+      return customerPhone != currentUserPhone;
+    }).toList();
+    
+    setState(() {
+      customers = filteredList;
+      filteredCustomers = filteredList;
+      isLoading = false;
+    });
+  }
+
+  void _filterCustomers() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredCustomers = customers.where((customer) {
+        final name = customer['name']?.toString().toLowerCase() ?? '';
+        final phone = customer['phone']?.toString().toLowerCase() ?? '';
+        return name.contains(query) || phone.contains(query);
+      }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          'LuxusryDeliveries',
+          'Dashboard',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.black,
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.black),
-            onPressed: () => Navigator.pushNamed(context, '/notifications'),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 4),
-                    child: const Text(
-                      'Hello, Benjamin 👋',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                  ),
-                  Text(
-                    'Track and manage your deliveries',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Greeting Section
+              Text(
+                'Hello, $userName 👋',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 3,
-                children: [
-                  Card(
-                    color: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () => Navigator.pushNamed(context, '/delivery/new'),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_box, color: Colors.black),
-                          SizedBox(width: 8),
-                          Text('New Delivery', style: TextStyle(color: Colors.black)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Card(
-                    color: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () => Navigator.pushNamed(context, '/deliveries'),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.inventory_2, color: Colors.black),
-                          SizedBox(width: 8),
-                          Text('My Deliveries', style: TextStyle(color: Colors.black)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Card(
-                    color: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () => Navigator.pushNamed(context, '/track'),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.map, color: Colors.black),
-                          SizedBox(width: 8),
-                          Text('Track Package', style: TextStyle(color: Colors.black)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Card(
-                    color: Colors.white,
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () => Navigator.pushNamed(context, '/history'),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.history, color: Colors.black),
-                          SizedBox(width: 8),
-                          Text('History', style: TextStyle(color: Colors.black)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                'Add and manage your deliveries',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
               ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: const Text(
-                'Active Deliveries',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+              const SizedBox(height: 24),
+              
+              // Search Bar
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search Phone Number',
+                    hintStyle: TextStyle(color: Colors.grey[600]),
+                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                ),
               ),
-            ),
-            _buildDeliveryItem('Waiting', 'Chloe', '1234567890', 'assets/images/user_dash_1.png'),
-            _buildDeliveryItem('Picked up', 'Owen', '9876543210', 'assets/images/user_dash_2.png'),
-            _buildDeliveryItem('On the way', 'Amelia', '1122334455', 'assets/images/user_dash_3.png'),
-            _buildDeliveryItem('Delivered', 'Lucas', '5544332211', 'assets/images/user_dash_4.png'),
-          ],
+              const SizedBox(height: 24),
+              
+              // Customer List
+              if (isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (filteredCustomers.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Text(
+                      'No customers found',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ...filteredCustomers.map((customer) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildContactItem(customer),
+                )).toList(),
+            ],
+          ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 0,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey[600],
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: 'Deliveries'),
-          BottomNavigationBarItem(icon: Icon(Icons.place), label: 'Addresses'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-        onTap: (index) {
-          switch (index) {
-            case 0: break;
-            case 1: Navigator.pushNamed(context, '/deliveries'); break;
-            case 2: Navigator.pushNamed(context, '/addresses'); break;
-            case 3: Navigator.pushNamed(context, '/profile'); break;
-          }
-        },
-      ),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
     );
   }
 
-  Widget _buildDeliveryItem(String status, String receiver, String parcelId, String imagePath) {
+  Widget _buildContactItem(Map<String, dynamic> customer) {
+    final name = customer['name'] ?? 'Unknown';
+    final phone = customer['phone'] ?? 'No phone';
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  status,
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ),
-              Text(
-                'Receiver: $receiver',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-              Text(
-                'Parcel ID: $parcelId',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ],
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Avatar
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.grey[300],
+            child: Icon(
+              Icons.person,
+              color: Colors.grey[600],
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Contact Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  phone,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // New Delivery Button
           Container(
-            width: 140,
-            height: 84,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              image: DecorationImage(
-                image: AssetImage(imagePath),
-                fit: BoxFit.cover,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: InkWell(
+              onTap: () => Navigator.pushNamed(
+                context, 
+                '/delivery/new',
+                arguments: customer,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add, size: 16, color: Colors.black),
+                  SizedBox(width: 4),
+                  Text(
+                    'New Delivery',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
+import '../services/api_service.dart';
+import '../widgets/custom_bottom_nav.dart';
+import '../widgets/rider_bottom_nav.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,16 +22,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    // Mock user data
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _userProfile = {
-        'username': 'Benjamin',
-        'phone': '0812345678',
-        'address': '123 Main Street, Bangkok 10110',
-      };
-      _isLoading = false;
-    });
+    try {
+      final user = await ApiService.getCurrentUser();
+      setState(() {
+        _userProfile = user ?? {
+          'name': 'Unknown User',
+          'phone': 'No phone',
+        };
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _userProfile = {
+          'name': 'Error loading user',
+          'phone': 'No phone',
+        };
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -106,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   // Name
                   Text(
-                    _userProfile?['username'] ?? 'ยังไม่มีชื่อ',
+                    _userProfile?['name'] ?? 'Unknown User',
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -114,29 +125,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       letterSpacing: -0.8,
                     ),
                   ),
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 40),
 
                   // Phone Number Section
                   _buildInfoSection(
-                    'หมายเลขโทรศัพท์',
-                    _userProfile?['phone'] ?? 'ยังไม่มีเบอร์โทรศัพท์',
+                    'Phone Number',
+                    _userProfile?['phone'] ?? 'No phone number',
                   ),
                   const SizedBox(height: 32),
 
-                  // Address Section
+                  // Role Section
                   _buildInfoSection(
-                    'ที่อยู่ปัจจุบัน',
-                    _userProfile?['address'] ?? 'ยังไม่มีที่อยู่',
+                    'Role',
+                    _userProfile?['role'] ?? 'CUSTOMER',
                   ),
-                  const SizedBox(height: 120),
+                  const SizedBox(height: 32),
 
-                  // Logout Button
+                  // User ID Section
+                  _buildInfoSection(
+                    'User ID',
+                    _userProfile?['user_id']?.toString() ?? 'Unknown',
+                  ),
+                  
+                  // Spacer to push logout button to bottom
+                  const SizedBox(height: 100),
+
+                  // Logout Button - moved to bottom
                   Container(
                     width: double.infinity,
                     height: 56,
-                    margin: const EdgeInsets.symmetric(horizontal: 0),
+                    margin: const EdgeInsets.only(bottom: 20),
                     child: OutlinedButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        await ApiService.logout();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -155,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text(
-                        'ออกจากระบบ',
+                        'Logout',
                         style: TextStyle(
                           color: Color(0xFFE53E3E),
                           fontSize: 16,
@@ -165,31 +186,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
                 ],
               ),
             ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 3,
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.grey[600],
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.local_shipping), label: 'Deliveries'),
-          BottomNavigationBarItem(icon: Icon(Icons.place), label: 'Addresses'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-        onTap: (index) {
-          switch (index) {
-            case 0: Navigator.pushNamed(context, '/user'); break;
-            case 1: Navigator.pushNamed(context, '/deliveries'); break;
-            case 2: Navigator.pushNamed(context, '/addresses'); break;
-            case 3: break;
-          }
-        },
-      ),
+      bottomNavigationBar: _userProfile?['role'] == 'RIDER' 
+          ? const RiderBottomNav(currentIndex: 2)
+          : const CustomBottomNav(currentIndex: 3),
     );
   }
 
