@@ -31,12 +31,8 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
         
-      - name: Run tests (optional)
-        run: flutter test --no-pub
-        continue-on-error: true
-        
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
         
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
